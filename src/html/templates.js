@@ -9,7 +9,7 @@ export const loginTemplate = (lang = 'en', message = '') => {
   <meta charset="UTF-8">
   <title>${isZh ? '登录 - 文件分享' : 'Login - File Share'}</title>
   <style>
-    body {
+  body {
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       margin: 0;
       display: flex;
@@ -57,7 +57,7 @@ export const loginTemplate = (lang = 'en', message = '') => {
   <div class="login-form">
     <h2>${isZh ? '登录' : 'Login'}</h2>
     ${message ? `<p class="error-message">${message}</p>` : ''}
-    <form method="POST" action="/auth">
+    <form method="POST" action="auth">
       <input type="password" name="password" placeholder="${isZh ? '密码' : 'Password'}" required>
       <button type="submit">${isZh ? '登录' : 'Login'}</button>
     </form>
@@ -76,7 +76,6 @@ export const mainTemplate = (lang = 'en', files = []) => {
   <meta charset="UTF-8">
   <title>${isZh ? '文件分享' : 'File Share'}</title>
   <style>
-    /* CSS 样式 */
     body {
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       margin: 0;
@@ -250,7 +249,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
       <tbody>
         ${files.map(file => `
           <tr>
-            <td><a href="/file/${file.id}" target="_blank">${file.filename}</a></td>
+            <td><a href="file/${file.id}" target="_blank">${file.filename}</a></td>
             <td>${formatSize(file.size)}</td>
             <td>${file.storage_type.toUpperCase()}</td>
             <td>${new Date(file.created_at).toLocaleString(lang)}</td>
@@ -263,10 +262,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
 
   <script>
     function formatSize(bytes) {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
-      if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + ' MB';
-      return (bytes / 1073741824).toFixed(2) + ' GB';
+      // ... existing code ...
     }
 
     const dragDropArea = document.getElementById('dragDropArea');
@@ -299,20 +295,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
     fileInput.addEventListener('change', updateFileList);
 
     function updateFileList() {
-      fileList.innerHTML = '';
-      const files = fileInput.files;
-      let totalSize = 0;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        totalSize += file.size;
-        const li = document.createElement('li');
-        li.textContent = file.name + ' (' + formatSize(file.size) + ')';
-        fileList.appendChild(li);
-      }
-      const estimatedCost = ((totalSize / (1024 * 1024 * 1024)) * 0.02).toFixed(2); // 假设每GB 0.02美元
-      feeWarning.textContent = lang === 'zh'
-        ? \`预计费用：\$\${estimatedCost}\`
-        : \`Estimated cost: \$\${estimatedCost}\`;
+      // ... existing code ...
     }
 
     async function uploadFiles() {
@@ -329,7 +312,6 @@ export const mainTemplate = (lang = 'en', files = []) => {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // 保留对存储介质的选择
         let currentStorageType = storageType;
         if (file.size > 25 * 1024 * 1024 && currentStorageType !== 'r2') {
           currentStorageType = 'r2';
@@ -340,7 +322,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
         formData.append('storage', currentStorageType);
 
         try {
-          const response = await fetch('/upload', {
+          const response = await fetch('upload', {
             method: 'POST',
             body: formData,
           });
@@ -350,7 +332,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
           }
 
           const data = await response.json();
-          const shareUrl = \`\${window.location.origin}/file/\${data.id}\`;
+          const shareUrl = new URL(\`file/\${data.id}\`, window.location.href).href;
 
           uploadResult.style.display = 'block';
           uploadResult.innerHTML += \`
@@ -367,7 +349,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
 
       uploadingIndicator.style.display = 'none';
 
-      // 刷新页面以显示更新后的文件列表
+      // Refresh the page to show the updated file list
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -382,7 +364,7 @@ export const mainTemplate = (lang = 'en', files = []) => {
       formData.append('id', id);
 
       try {
-        const response = await fetch('/delete', {
+        const response = await fetch('delete', {
           method: 'POST',
           body: formData,
         });
@@ -390,7 +372,6 @@ export const mainTemplate = (lang = 'en', files = []) => {
         const result = await response.json();
 
         if (result.success) {
-          // 移除文件行
           window.location.reload();
         } else {
           alert(lang === 'zh' ? '删除失败' : 'Failed to delete');
