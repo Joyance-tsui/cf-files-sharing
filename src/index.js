@@ -10,20 +10,20 @@ export default {
     const url = new URL(request.url);
     const storageManager = new StorageManager(env);
 
-    // 获取用户的语言偏好
+    // Get user's preferred language
     const acceptLanguage = request.headers.get('Accept-Language') || 'en';
     const lang = acceptLanguage.includes('zh') ? 'zh' : 'en';
 
-    // 文件下载处理
-    if (url.pathname.startsWith('/file/')) {
-      const id = url.pathname.split('/')[2];
+    // File download handling
+    if (url.pathname.includes('/file/')) {
+      const id = url.pathname.split('/').pop();
       const file = await storageManager.retrieve(id);
 
       if (!file) {
         return errorResponse(lang === 'zh' ? '文件未找到' : 'File not found', 404);
       }
 
-      // 解决中文文件名下载问题
+      // Handle file download with proper filename encoding
       const filename = file.filename;
       const encodedFilename = encodeURIComponent(filename);
       const contentDisposition = `attachment; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`;
@@ -36,9 +36,9 @@ export default {
       });
     }
 
-    // 认证检查
+    // Authentication check
     if (!(await Auth.verifyAuth(request, env))) {
-      if (url.pathname === '/auth' && request.method === 'POST') {
+      if (url.pathname.endsWith('/auth') && request.method === 'POST') {
         const formData = await request.formData();
         const password = formData.get('password');
 
@@ -49,7 +49,7 @@ export default {
           return new Response('', {
             status: 302,
             headers: {
-              'Location': '/',
+              'Location': '.',
               'Set-Cookie': cookie,
             },
           });
@@ -60,8 +60,8 @@ export default {
       return htmlResponse(loginTemplate(lang));
     }
 
-    // 文件删除处理
-    if (url.pathname === '/delete' && request.method === 'POST') {
+    // File deletion handling
+    if (url.pathname.endsWith('/delete') && request.method === 'POST') {
       const formData = await request.formData();
       const id = formData.get('id');
 
@@ -74,15 +74,15 @@ export default {
       }
     }
 
-    // 文件上传处理
-    if (url.pathname === '/upload' && request.method === 'POST') {
+    // File upload handling
+    if (url.pathname.endsWith('/upload') && request.method === 'POST') {
       const formData = await request.formData();
       const file = formData.get('file');
       let storageType = formData.get('storage');
 
-      // 保留对存储介质的选择
+      // Enforce R2 storage for files larger than 25MB
       if (file.size > 25 * 1024 * 1024 && storageType !== 'r2') {
-        storageType = 'r2'; // 大于25MB的文件强制使用R2
+        storageType = 'r2';
       }
 
       const metadata = await storageManager.store(file, storageType);
@@ -95,8 +95,8 @@ export default {
       });
     }
 
-    // 主页面
-    if (url.pathname === '/') {
+    // Main page
+    if (url.pathname === '/' || url.pathname.endsWith('/')) {
       const files = await storageManager.list();
 
       return htmlResponse(mainTemplate(lang, files));
